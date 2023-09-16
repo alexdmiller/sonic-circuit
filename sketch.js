@@ -1,8 +1,10 @@
 const SPEED = 2;
+const CELL_SIZE = 25;
 const nodes = [];
 const edges = [];
-let monoSynth;
 
+let mode = "wait";
+let currentNode = null;
 
 class Edge {
   start;
@@ -59,12 +61,10 @@ class Node {
   previousEdge = 0;
 
   constructor(x, y, note, mode = "multicast") {
-    this.position = {x, y};
+    this.position = { x, y };
     this.monoSynth = new p5.MonoSynth();
     this.note = note;
     this.mode = mode;
-    // this.monoSynth.setADSR(0, 0.0001, 0, 0);
-
   }
 
   addEdge(edge) {
@@ -73,20 +73,34 @@ class Node {
 
   draw() {
     noFill();
-    stroke(255);
+    if (this.mode == "multicast") {
+      stroke(255);
+    } else if (this.mode == "roundrobin") {
+      stroke(255, 0, 255);
+    }
+
     fill(255, this.excitement * 255);
     this.excitement *= 0.9;
     ellipse(this.position.x, this.position.y, 10, 10);
+
+    if (currentNode == this) {
+      stroke(255);
+      ellipse(this.position.x, this.position.y, 20, 20);
+    }
+
+    const gridPoint = closestGridPoint(this.position.x, this.position.y);
+    this.position.x = gridPoint.x;
+    this.position.y = gridPoint.y;
   }
 
   fire() {
     this.monoSynth.play(this.note, 1, 0, 0.01);
 
-    if (this.mode == 'multicast') {
+    if (this.mode == "multicast") {
       for (const edge of this.edges) {
         edge.addSignal();
       }
-    } else if (this.mode == 'roundrobin') {
+    } else if (this.mode == "roundrobin") {
       this.edges[this.previousEdge].addSignal();
       this.previousEdge = (this.previousEdge + 1) % this.edges.length;
     }
@@ -94,6 +108,11 @@ class Node {
   }
 }
 
+function closestGridPoint(x, y) {
+  const gridX = Math.round(x / CELL_SIZE) * CELL_SIZE;
+  const gridY = Math.round(y / CELL_SIZE) * CELL_SIZE;
+  return { x: gridX, y: gridY };
+}
 
 function setup() {
   canvas = createCanvas(1000, 1000);
@@ -141,6 +160,35 @@ function setup() {
 function draw() {
   background(0);
 
+  // draw grid with dots
+  fill(100);
+  noStroke();
+  for (let x = 0; x < width; x += CELL_SIZE) {
+    for (let y = 0; y < height; y += CELL_SIZE) {
+      ellipse(x, y, 2, 2);
+    }
+  }
+
+  // stroke(50);
+  // for (let x = 0; x < width; x += CELL_SIZE) {
+  //   line(x, 0, x, height);
+  // }
+  // for (let y = 0; y < height; y += CELL_SIZE) {
+  //   line(0, y, width, y);
+  // }
+
+  switch (mode) {
+    case "wait":
+      fill(255);
+      noStroke();
+      text("CLICK TO BEGIN", width / 2, height / 2);
+      break;
+    case "drag-node":
+      currentNode.position.x = mouseX;
+      currentNode.position.y = mouseY;
+      break;
+  }
+
   for (const edge of edges) {
     edge.draw();
   }
@@ -150,7 +198,105 @@ function draw() {
   }
 }
 
+function nodeAtPoint(x, y) {
+  for (node of nodes) {
+    const dx = node.position.x - x;
+    const dy = node.position.y - y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 5) {
+      return node;
+    }
+  }
+}
+
+function dragNode() {
+  const selected = nodeAtPoint(mouseX, mouseY);
+  if (selected) {
+    currentNode = selected;
+    mode = "drag-node";
+  }
+}
+
+function createNodeOrEdge() {
+  const selected = nodeAtPoint(mouseX, mouseY);
+  if (selected) {
+    currentNode = selected;
+    mode = "create-edge";
+  } else {
+    const node = new Node(mouseX, mouseY, "E3");
+    nodes.push(node);
+  }
+}
+
+function playNode() {
+  const selected = nodeAtPoint(mouseX, mouseY);
+  if (selected) {
+    selected.fire();
+  }
+}
+
+function keyPressed() {
+  console.log(keyCode);
+  if (keyCode == 8) {
+    if (currentNode) {
+      for (let i = edges.length - 1; i >= 0; i--) {
+        const edge = edges[i];
+        if (edge.start == currentNode || edge.end == currentNode) {
+          edges.splice(i, 1);
+        }
+      }
+
+      for (let i = nodes.length - 1; i >= 0; i--) {
+        const node = nodes[i];
+        if (node == currentNode) {
+          nodes.splice(i, 1);
+        }
+      }
+      currentNode = null;
+    }
+  }
+}
+
 function mousePressed() {
-  userStartAudio();
-  nodes[0].fire();
+  switch (mode) {
+    case "wait":
+      userStartAudio();
+      mode = "select";
+      break;
+    case "select":
+      if (keyIsDown(16)) {
+        dragNode();
+      } else if (keyIsDown(224)) {
+        createNodeOrEdge();
+      } else {
+        currentNode = nodeAtPoint(mouseX, mouseY);
+      }
+      break;
+  }
+}
+
+function mouseReleased() {
+  switch (mode) {
+    case "drag-node":
+      mode = "select";
+      currentNode = null;
+      break;
+    case "create-edge":
+      const selected = nodeAtPoint(mouseX, mouseY);
+      if (selected) {
+        const edge = new Edge(currentNode, selected);
+        edges.push(edge);
+      }
+      mode = "select";
+      currentNode = null;
+      break;
+  }
+}
+
+function doubleClicked() {
+  switch (mode) {
+    case "select":
+      playNode();
+      break;
+  }
 }
