@@ -1,3 +1,5 @@
+Hosted at [https://alex.miller.garden/sonic-circuit](https://alex.miller.garden/sonic-circuit).
+
 ### To run
 
 ```
@@ -10,12 +12,13 @@ Go to localhost:8000/ in browser.
 
 Warning: not user friendly.
 
-- **Command + click:** add new node
-- **Command + drag:** add edge between nodes
-- **Option + drag up/down:** change node note
-- **Shift + drag**: move node
-- **`~` + drag**: change node mode
-- **Click + delete**: remove node
+- Command + click: add new node
+- Command + drag: add edge between nodes
+- Double click: trigger a signal on a node
+- Click + drag: move node
+- Option + drag up/down: change node note
+- `~` + drag: change node mode
+- Click + delete: remove node
 
 ### Modes of nodes
 
