@@ -351,7 +351,7 @@ function mousePressed() {
         adjustPitch();
       } else if (keyIsDown(192)) {
         adjustNodeMode();
-      } else if (keyIsDown(224)) {
+      } else if (keyIsDown(224) || keyIsDown(91)) {
         createNodeOrEdge();
       } else {
         currentNode = nodeAtPoint(mouseX, mouseY);
