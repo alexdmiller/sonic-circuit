@@ -14,7 +14,7 @@ Warning: not user friendly.
 - **Command + drag:** add edge between nodes
 - **Option + drag up/down:** change node note
 - **Shift + drag**: move node
-- **~ + drag**: change node mode
+- **`~` + drag**: change node mode
 - **Click + delete**: remove node
 
 ### Modes of nodes
