@@ -334,6 +334,13 @@ function keyPressed() {
           const node = nodes[i];
           if (node == currentNode) {
             nodes.splice(i, 1);
+          } else {
+            for (let j = node.edges.length - 1; j >= 0; j--) {
+              const edge = node.edges[j];
+              if (edge.start == currentNode || edge.end == currentNode) {
+                node.edges.splice(j, 1);
+              }
+            }
           }
         }
         currentNode = null;
