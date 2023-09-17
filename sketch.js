@@ -1,5 +1,43 @@
-const SPEED = 2;
-const CELL_SIZE = 25;
+const VISUAL_SCALE = 3;
+
+const SPEED = 2 * VISUAL_SCALE;
+const CELL_SIZE = 25 * VISUAL_SCALE;
+const NODE_SIZE = 15 * VISUAL_SCALE;
+const LINE_THICKNESS = 4;
+
+const SCALE = [
+  "A2",
+  "B2",
+  "C2",
+  "D2",
+  "E2",
+  "F2",
+  "G2",
+  "A3",
+  "B3",
+  "C3",
+  "D3",
+  "E3",
+  "F3",
+  "G3",
+  "A4",
+  "B4",
+  "C4",
+  "D4",
+  "E4",
+  "F4",
+  "G4",
+  "A5",
+  "B5",
+  "C5",
+  "D5",
+  "E5",
+  "F5",
+  "G5",
+  "A6",
+];
+const NODE_MODES = ["multicast", "round-robin", "random"];
+
 const nodes = [];
 const edges = [];
 
@@ -32,7 +70,7 @@ class Edge {
     }
 
     stroke(255);
-    line(
+    drawEdge(
       this.start.position.x,
       this.start.position.y,
       this.end.position.x,
@@ -43,7 +81,7 @@ class Edge {
       fill(255);
       const x = Math.cos(angle) * signal + this.start.position.x;
       const y = Math.sin(angle) * signal + this.start.position.y;
-      ellipse(x, y, 5, 5);
+      ellipse(x, y, LINE_THICKNESS * 2, LINE_THICKNESS * 2);
     }
   }
 
@@ -73,19 +111,38 @@ class Node {
 
   draw() {
     noFill();
+    strokeWeight(LINE_THICKNESS);
     if (this.mode == "multicast") {
       stroke(255);
-    } else if (this.mode == "roundrobin") {
+    } else if (this.mode == "round-robin") {
       stroke(255, 0, 255);
     }
 
     fill(255, this.excitement * 255);
     this.excitement *= 0.9;
-    ellipse(this.position.x, this.position.y, 10, 10);
+    ellipse(this.position.x, this.position.y, NODE_SIZE, NODE_SIZE);
 
     if (currentNode == this) {
       stroke(255);
-      ellipse(this.position.x, this.position.y, 20, 20);
+      ellipse(this.position.x, this.position.y, NODE_SIZE + 10, NODE_SIZE + 10);
+    }
+
+    if (mode == "adjust-pitch") {
+      fill(0);
+      noStroke();
+      ellipse(this.position.x, this.position.y, NODE_SIZE - 2, NODE_SIZE + -2);
+      textAlign(CENTER, CENTER);
+      textSize(16);
+      fill(255);
+      text(this.note, this.position.x, this.position.y);
+    } else if (mode == "adjust-node-mode") {
+      fill(0);
+      noStroke();
+      ellipse(this.position.x, this.position.y, NODE_SIZE - 2, NODE_SIZE + -2);
+      textAlign(CENTER, CENTER);
+      textSize(16);
+      fill(255);
+      text(this.mode, this.position.x, this.position.y);
     }
 
     const gridPoint = closestGridPoint(this.position.x, this.position.y);
@@ -100,12 +157,29 @@ class Node {
       for (const edge of this.edges) {
         edge.addSignal();
       }
-    } else if (this.mode == "roundrobin") {
+    } else if (this.mode == "round-robin") {
       this.edges[this.previousEdge].addSignal();
       this.previousEdge = (this.previousEdge + 1) % this.edges.length;
     }
     this.excitement = 1;
   }
+}
+
+function drawEdge(x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx);
+
+  strokeWeight(LINE_THICKNESS);
+  line(x1, y1, x2, y2);
+
+  push();
+  translate(x1, y1);
+  rotate(angle);
+  line(dist / 2 - 10, -10, dist / 2, 0);
+  line(dist / 2 - 10, +10, dist / 2, 0);
+  pop();
 }
 
 function closestGridPoint(x, y) {
@@ -115,46 +189,7 @@ function closestGridPoint(x, y) {
 }
 
 function setup() {
-  canvas = createCanvas(1000, 1000);
-
-  const node1 = new Node(100, 100, "E5");
-  nodes.push(node1);
-
-  const node2 = new Node(120, 100, "E5");
-  nodes.push(node2);
-
-  const node3 = new Node(120, 120, "E5");
-  nodes.push(node3);
-
-  const node4 = new Node(100, 120, "E6");
-  nodes.push(node4);
-
-  const node5 = new Node(300, 120, "E2", "roundrobin");
-  nodes.push(node5);
-
-  const node6 = new Node(400, 120, "A3");
-  nodes.push(node6);
-
-  const node7 = new Node(400, 140, "G2");
-  nodes.push(node7);
-
-  const edge1 = new Edge(node1, node2);
-  edges.push(edge1);
-
-  const edge2 = new Edge(node2, node3);
-  edges.push(edge2);
-
-  const edge3 = new Edge(node3, node4);
-  edges.push(edge3);
-
-  const edge4 = new Edge(node4, node1);
-  edges.push(edge4);
-
-  const edge5 = new Edge(node3, node5);
-  edges.push(edge5);
-
-  edges.push(new Edge(node5, node6));
-  edges.push(new Edge(node5, node7));
+  canvas = createCanvas(1000, 800);
 }
 
 function draw() {
@@ -165,27 +200,52 @@ function draw() {
   noStroke();
   for (let x = 0; x < width; x += CELL_SIZE) {
     for (let y = 0; y < height; y += CELL_SIZE) {
-      ellipse(x, y, 2, 2);
+      ellipse(x, y, 4, 4);
     }
   }
-
-  // stroke(50);
-  // for (let x = 0; x < width; x += CELL_SIZE) {
-  //   line(x, 0, x, height);
-  // }
-  // for (let y = 0; y < height; y += CELL_SIZE) {
-  //   line(0, y, width, y);
-  // }
 
   switch (mode) {
     case "wait":
       fill(255);
       noStroke();
+      textAlign(CENTER, CENTER);
+      textSize(32);
       text("CLICK TO BEGIN", width / 2, height / 2);
       break;
     case "drag-node":
       currentNode.position.x = mouseX;
       currentNode.position.y = mouseY;
+      break;
+    case "adjust-pitch":
+      {
+        const delta = currentNode.position.y - mouseY;
+        const noteIndex = Math.floor(SCALE.length / 2) + Math.floor(delta / 20);
+        if (noteIndex >= 0 && noteIndex < SCALE.length) {
+          const nextNote = SCALE[noteIndex];
+          if (nextNote != currentNode.note) {
+            currentNode.note = nextNote;
+            currentNode.monoSynth.play(currentNode.note, 1, 0, 0.01);
+          }
+        }
+      }
+      break;
+    case "adjust-node-mode":
+      {
+        const delta = currentNode.position.y - mouseY;
+        const index =
+          Math.floor(NODE_MODES.length / 2) + Math.floor(delta / 50);
+        if (index >= 0 && index < NODE_MODES.length) {
+          const nextMode = NODE_MODES[index];
+          console.log(nextMode);
+          if (nextMode != currentNode.mode) {
+            currentNode.mode = nextMode;
+          }
+        }
+      }
+      break;
+    case "create-edge":
+      stroke(150);
+      drawEdge(currentNode.position.x, currentNode.position.y, mouseX, mouseY);
       break;
   }
 
@@ -203,7 +263,7 @@ function nodeAtPoint(x, y) {
     const dx = node.position.x - x;
     const dy = node.position.y - y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < 5) {
+    if (dist < NODE_SIZE) {
       return node;
     }
   }
@@ -214,6 +274,22 @@ function dragNode() {
   if (selected) {
     currentNode = selected;
     mode = "drag-node";
+  }
+}
+
+function adjustPitch() {
+  const selected = nodeAtPoint(mouseX, mouseY);
+  if (selected) {
+    currentNode = selected;
+    mode = "adjust-pitch";
+  }
+}
+
+function adjustNodeMode() {
+  const selected = nodeAtPoint(mouseX, mouseY);
+  if (selected) {
+    currentNode = selected;
+    mode = "adjust-node-mode";
   }
 }
 
@@ -254,6 +330,11 @@ function keyPressed() {
       }
       currentNode = null;
     }
+  } else if (keyCode == 32) {
+    // clear all signals
+    for (const edge of edges) {
+      edge.signals = [];
+    }
   }
 }
 
@@ -266,6 +347,10 @@ function mousePressed() {
     case "select":
       if (keyIsDown(16)) {
         dragNode();
+      } else if (keyIsDown(18)) {
+        adjustPitch();
+      } else if (keyIsDown(192)) {
+        adjustNodeMode();
       } else if (keyIsDown(224)) {
         createNodeOrEdge();
       } else {
@@ -277,16 +362,18 @@ function mousePressed() {
 
 function mouseReleased() {
   switch (mode) {
-    case "drag-node":
-      mode = "select";
-      currentNode = null;
-      break;
     case "create-edge":
       const selected = nodeAtPoint(mouseX, mouseY);
-      if (selected) {
+      if (selected && selected != currentNode) {
         const edge = new Edge(currentNode, selected);
         edges.push(edge);
       }
+      mode = "select";
+      currentNode = null;
+      break;
+    case "adjust-pitch":
+    case "adjust-node-mode":
+    case "drag-node":
       mode = "select";
       currentNode = null;
       break;
