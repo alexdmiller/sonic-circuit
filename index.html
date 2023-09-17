@@ -4,12 +4,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>p5.js example</title>
+  <title>sonic circuit studio</title>
   <style>
     body {
-      padding: 0;
-      margin: 0;
-      background-color: #1b1b1b;
+      font-family: sans-serif;
     }
   </style>
   <script src="lib/p5.min.js"></script>
@@ -19,8 +17,38 @@
 </head>
 
 <body>
-  <main>
-  </main>
+  <div style="display: flex; flex-direction: row; flex-wrap: wrap;">
+    <main>
+    </main>
+    <div style="padding: 20px">
+      <h2>Controls</h2>
+      <p>Warning: not user friendly.</p>
+      <ul>
+        <li><strong>Command + click:</strong> add new node</li>
+        <li><strong>Command + drag:</strong> add edge between nodes</li>
+        <li><strong>Double click:</strong> trigger a signal on a node</li>
+        <li><strong>Click + drag:</strong> move node</li>
+        <li><strong>Option + drag up/down:</strong> change node note</li>
+        <li><strong>~ + drag:</strong> change node mode</li>
+        <li><strong>Click + delete:</strong> remove node</li>
+      </ul>
+      <h2>Modes of nodes</h2>
+      <ul>
+        <li><strong>multicast:</strong> broadcasts out to all edges simultaneously</li>
+        <li><strong>round-robin:</strong> broadcasts out to each edge in turn</li>
+        <li><strong>random:</strong> not yet implemented but you can see where this is going</li>
+      </ul>
+      <h2>Sharing</h2>
+      <p>Copy and paste the URL. It includes the complete state of your circuit.</p>
+      <h2>About</h2>
+      <p>
+        By <a href="https://alex.miller.garden/">Alex Miller</a>. <a
+          href="https://github.com/alexdmiller/sonic-circuit">Code on GitHub.</a>
+      </p>
+    </div>
+  </div>
+
+
 </body>
 
 </html>

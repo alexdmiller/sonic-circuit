@@ -37,9 +37,14 @@ const SCALE = [
   "A6",
 ];
 const NODE_MODES = ["multicast", "round-robin", "random"];
+const SHORT_MODES = {
+  multicast: "m",
+  "round-robin": "o",
+  random: "r",
+};
 
-const nodes = [];
-const edges = [];
+let nodes = [];
+let edges = [];
 
 let mode = "wait";
 let currentNode = null;
@@ -190,6 +195,7 @@ function closestGridPoint(x, y) {
 
 function setup() {
   canvas = createCanvas(1000, 800);
+  deserializeFromUrl();
 }
 
 function draw() {
@@ -236,7 +242,6 @@ function draw() {
           Math.floor(NODE_MODES.length / 2) + Math.floor(delta / 50);
         if (index >= 0 && index < NODE_MODES.length) {
           const nextMode = NODE_MODES[index];
-          console.log(nextMode);
           if (nextMode != currentNode.mode) {
             currentNode.mode = nextMode;
           }
@@ -301,6 +306,7 @@ function createNodeOrEdge() {
   } else {
     const node = new Node(mouseX, mouseY, "E3");
     nodes.push(node);
+    serializeToUrl();
   }
 }
 
@@ -313,28 +319,33 @@ function playNode() {
 
 function keyPressed() {
   console.log(keyCode);
-  if (keyCode == 8) {
-    if (currentNode) {
-      for (let i = edges.length - 1; i >= 0; i--) {
-        const edge = edges[i];
-        if (edge.start == currentNode || edge.end == currentNode) {
-          edges.splice(i, 1);
+  switch (keyCode) {
+    case 8:
+      // backspace - delete node
+      if (currentNode) {
+        for (let i = edges.length - 1; i >= 0; i--) {
+          const edge = edges[i];
+          if (edge.start == currentNode || edge.end == currentNode) {
+            edges.splice(i, 1);
+          }
         }
-      }
 
-      for (let i = nodes.length - 1; i >= 0; i--) {
-        const node = nodes[i];
-        if (node == currentNode) {
-          nodes.splice(i, 1);
+        for (let i = nodes.length - 1; i >= 0; i--) {
+          const node = nodes[i];
+          if (node == currentNode) {
+            nodes.splice(i, 1);
+          }
         }
+        currentNode = null;
       }
-      currentNode = null;
-    }
-  } else if (keyCode == 32) {
-    // clear all signals
-    for (const edge of edges) {
-      edge.signals = [];
-    }
+      serializeToUrl();
+      break;
+    case 32:
+      // spacebar - clear all signals
+      for (const edge of edges) {
+        edge.signals = [];
+      }
+      break;
   }
 }
 
@@ -345,16 +356,14 @@ function mousePressed() {
       mode = "select";
       break;
     case "select":
-      if (keyIsDown(16)) {
-        dragNode();
-      } else if (keyIsDown(18)) {
+      if (keyIsDown(18)) {
         adjustPitch();
       } else if (keyIsDown(192)) {
         adjustNodeMode();
-      } else if (keyIsDown(224) || keyIsDown(91)) {
+      } else if (keyIsDown(224) || keyIsDown(91) || keyIsDown(93)) {
         createNodeOrEdge();
       } else {
-        currentNode = nodeAtPoint(mouseX, mouseY);
+        dragNode();
       }
       break;
   }
@@ -370,12 +379,13 @@ function mouseReleased() {
       }
       mode = "select";
       currentNode = null;
+      serializeToUrl();
       break;
     case "adjust-pitch":
     case "adjust-node-mode":
     case "drag-node":
       mode = "select";
-      currentNode = null;
+      serializeToUrl();
       break;
   }
 }
@@ -386,4 +396,79 @@ function doubleClicked() {
       playNode();
       break;
   }
+}
+
+function serialize(nodes) {
+  for (let i = 0; i < nodes.length; i++) {
+    nodes[i].id = i;
+  }
+
+  let serialized = "";
+  for (node of nodes) {
+    const edges = node.edges.map((edge) => edge.end.id);
+    const cellX = Math.round(node.position.x / CELL_SIZE);
+    const cellY = Math.round(node.position.y / CELL_SIZE);
+
+    const shortMode = SHORT_MODES[node.mode];
+    const str = `${cellX} ${cellY} ${node.note} ${shortMode} ${edges.join(
+      " "
+    )}`;
+    serialized += str + "\n";
+  }
+  return serialized;
+}
+
+function serializeToUrl() {
+  let serialized = serialize(nodes);
+  serialized = serialized.trim();
+  serialized = serialized.replace(/\n/g, ",");
+  serialized = serialized.replace(/\s/g, ".");
+  window.history.replaceState(
+    { html: serialized, pageTitle: "" },
+    "",
+    `?${serialized}`
+  );
+}
+
+function deserialize(str) {
+  str = str.trim();
+
+  if (str.length == 0) {
+    return { nodes: [], edges: [] };
+  }
+  const lines = str.split("\n");
+  const nodes = [];
+  const edges = [];
+
+  for (let line of lines) {
+    const parts = line.trim().split(" ");
+    const cellX = parseInt(parts[0]);
+    const cellY = parseInt(parts[1]);
+    const note = parts[2];
+    const mode = NODE_MODES[Object.values(SHORT_MODES).indexOf(parts[3])];
+
+    const x = cellX * CELL_SIZE;
+    const y = cellY * CELL_SIZE;
+    const node = new Node(x, y, note, mode);
+    nodes.push(node);
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const parts = lines[i].trim().split(" ");
+    const edgeIds = parts.slice(4).map((id) => parseInt(id));
+    for (let edgeId of edgeIds) {
+      const edge = new Edge(nodes[i], nodes[edgeId]);
+      edges.push(edge);
+    }
+  }
+  return { nodes, edges };
+}
+
+function deserializeFromUrl() {
+  let queryString = window.location.search.substring(1);
+  queryString = queryString.replace(/\,/g, "\n");
+  queryString = queryString.replace(/\./g, " ");
+  const { nodes: newNodes, edges: newEdges } = deserialize(queryString);
+  nodes = newNodes;
+  edges = newEdges;
 }
